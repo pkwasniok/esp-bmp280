@@ -14,7 +14,7 @@
 #define BMP280_REG_PRESS_XLSB 0xF9
 #define BMP280_REG_TEMP_MSB   0xFA
 #define BMP280_REG_TEMP_LSB   0xFB
-#define BMP280_REF_TEMP_XLSB  0xFC
+#define BMP280_REG_TEMP_XLSB  0xFC
 
 #define BMP280_VAL_ID    0x58
 #define BMP280_VAL_RESET 0xB6
@@ -30,33 +30,35 @@
 #define BMP280_VAL_OVERSAMPLING_X8      0b100
 #define BMP280_VAL_OVERSAMPLING_X16     0b101
 
+#define BMP280_OK    0
+#define BMP280_ERROR 1
+
 typedef enum {
-    BMP280_POWER_MODE_SLEEP,
-    BMP280_POWER_MODE_FORCED,
-    BMP280_POWER_MODE_NORMAL,
+    BMP280_POWER_MODE_SLEEP = BMP280_VAL_POWER_MODE_SLEEP,
+    BMP280_POWER_MODE_FORCED = BMP280_VAL_POWER_MODE_FORCED,
+    BMP280_POWER_MODE_NORMAL = BMP280_VAL_POWER_MODE_NORMAL,
 } bmp280_power_mode_t;
 
 typedef enum {
-    BMP280_OVERSAMPLING_SKIPPED,
-    BMP280_OVERSAMPLING_X1,
-    BMP280_OVERSAMPLING_X2,
-    BMP280_OVERSAMPLING_X4,
-    BMP280_OVERSAMPLING_X8,
-    BMP280_OVERSAMPLING_X16,
+    BMP280_OVERSAMPLING_SKIPPED = BMP280_VAL_OVERSAMPLING_SKIPPED,
+    BMP280_OVERSAMPLING_X1 = BMP280_VAL_OVERSAMPLING_X1,
+    BMP280_OVERSAMPLING_X2 = BMP280_VAL_OVERSAMPLING_X2,
+    BMP280_OVERSAMPLING_X4 = BMP280_VAL_OVERSAMPLING_X4,
+    BMP280_OVERSAMPLING_X8 = BMP280_VAL_OVERSAMPLING_X8,
+    BMP280_OVERSAMPLING_X16 = BMP280_VAL_OVERSAMPLING_X16,
 } bmp280_oversampling_t;
 
 typedef struct {
-    bmp280_power_mode_t power_mode;
-    bmp280_oversampling_t temperature_oversampling;
-    bmp280_oversampling_t pressure_oversampling;
-} bmp280_config_t;
-
-typedef struct {
-    bmp280_config_t* config;
-    i2c_master_dev_handle_t i2c_handle;
+    i2c_master_dev_handle_t i2c_device;
+    uint8_t params[26];
 } bmp280_t;
 
-void bmp280_init(bmp280_t*, bmp280_config_t*, i2c_master_bus_handle_t);
+int bmp280_init(bmp280_t*, i2c_master_bus_handle_t);
 
-void bmp280_reset(bmp280_t*);
+int bmp280_reset(bmp280_t*);
 
+int bmp280_set_power_mode(bmp280_t*, bmp280_power_mode_t);
+int bmp280_set_temperature_oversampling(bmp280_t*, bmp280_oversampling_t);
+int bmp280_set_pressure_oversampling(bmp280_t*, bmp280_oversampling_t);
+
+int bmp280_get_temperature_int(bmp280_t*, int32_t*);

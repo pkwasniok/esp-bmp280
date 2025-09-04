@@ -12,6 +12,9 @@
 #define GPIO_I2C_SDA 5
 
 void app_main(void) {
+
+    // Initialize I2C bus
+
     i2c_master_bus_config_t i2c_master_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = -1,
@@ -23,38 +26,23 @@ void app_main(void) {
     i2c_master_bus_handle_t i2c_master;
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_master_config, &i2c_master));
 
-    bmp280_config_t bmp280_config = {
-        .power_mode = BMP280_POWER_MODE_NORMAL,
-        .pressure_oversampling = BMP280_OVERSAMPLING_X1,
-        .temperature_oversampling = BMP280_OVERSAMPLING_X1,
-    };
-
     bmp280_t bmp280;
 
-    bmp280_init(&bmp280, &bmp280_config, i2c_master);
+    if (bmp280_init(&bmp280, i2c_master) != BMP280_OK) {
+        printf("BMP280 Error!\n");
+    }
 
-    // i2c_device_config_t i2c_device_config = {
-    //     .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-    //     .device_address = BMP280_I2C_ADDRESS,
-    //     .scl_speed_hz = 100000,
-    // };
-    //
-    // ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_master, &i2c_device_config, &i2c_device));
-    //
-    // bmp280_reset();
-    //
-    // bmp280_set_power_mode(BMP280_POWER_MODE_NORMAL);
-    //
-    // bmp280_set_temperature_oversampling(BMP280_TEMPERATURE_OVERSAMPLING_X1);
-    //
-    // bmp280_set_pressure_oversampling(BMP280_PRESSURE_OVERSAMPLING_X1);
-    //
-    // while (1) {
-    //     bmp280_get_temperature();
-    //     bmp280_get_pressure();
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
-    //
-    // printf("Finished setup!\n");
+    bmp280_set_power_mode(&bmp280, BMP280_POWER_MODE_NORMAL);
+    bmp280_set_temperature_oversampling(&bmp280, BMP280_OVERSAMPLING_X1);
+    bmp280_set_pressure_oversampling(&bmp280, BMP280_OVERSAMPLING_X4);
+
+    int32_t temperature;
+
+    while (1) {
+        bmp280_get_temperature_int(&bmp280, &temperature);
+
+        printf("Temperature: %.2f\n", temperature / 100.0);
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
-

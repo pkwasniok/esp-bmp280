@@ -62,3 +62,4 @@ int bmp280_set_temperature_oversampling(bmp280_t*, bmp280_oversampling_t);
 int bmp280_set_pressure_oversampling(bmp280_t*, bmp280_oversampling_t);
 
 int bmp280_get_temperature_int(bmp280_t*, int32_t*);
+int bmp280_get_pressure_int(bmp280_t*, uint32_t*);

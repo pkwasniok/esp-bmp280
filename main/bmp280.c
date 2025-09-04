@@ -180,3 +180,73 @@ int bmp280_get_temperature_int(bmp280_t* bmp, int32_t* temperature) {
 
     return BMP280_OK;
 }
+
+int _bmp280_read_pressure_adc(bmp280_t* bmp, int32_t* p_adc, int32_t* t_adc) {
+    uint8_t buffer[6];
+
+    if (_bmp280_read(bmp, BMP280_REG_PRESS_MSB, buffer, 6) != BMP280_OK) {
+        return BMP280_ERROR;
+    }
+
+    (*p_adc) = (buffer[0] << 12) | (buffer[1] << 4) | (buffer[2] >> 4);
+    (*t_adc) = (buffer[3] << 12) | (buffer[4] << 4) | (buffer[5] >> 4);
+
+    return BMP280_OK;
+}
+
+void _bmp280_compensate_pressure_int(int32_t p_adc, int32_t t_adc, uint8_t* params, uint32_t* pressure) {
+    // Temperature params
+    uint16_t dig_t1 = (params[1] << 8) | params[0];
+    int16_t dig_t2 = (params[3] << 8) | params[2];
+    int16_t dig_t3 = (params[5] << 8) | params[4];
+
+    // Temperature compensation
+    int32_t t_var1, t_var2, t_fine;
+    t_var1 = ((((t_adc>>3) - ((int32_t)dig_t1<<1))) * ((int32_t)dig_t2)) >> 11;
+    t_var2 = (((((t_adc>>4) - ((int32_t)dig_t1)) * ((t_adc>>4) - ((int32_t)dig_t1))) >> 12) * ((int32_t)dig_t3)) >> 14;
+    t_fine = t_var1 + t_var2;
+
+    // Pressure params
+    uint16_t dig_p1 = (params[7] << 8) | params[6];
+    int16_t dig_p2 = (params[9] << 8) | params[8];
+    int16_t dig_p3 = (params[11] << 8) | params[10];
+    int16_t dig_p4 = (params[13] << 8) | params[12];
+    int16_t dig_p5 = (params[15] << 8) | params[14];
+    int16_t dig_p6 = (params[17] << 8) | params[16];
+    int16_t dig_p7 = (params[19] << 8) | params[18];
+    int16_t dig_p8 = (params[21] << 8) | params[20];
+    int16_t dig_p9 = (params[23] << 8) | params[22];
+
+    int64_t p_var1, p_var2, p;
+    p_var1 = ((int64_t)t_fine) - 128000;
+    p_var2 = p_var1 * p_var1 * (int64_t)dig_p6;
+    p_var2 = p_var2 + ((p_var1 * (int64_t)dig_p5) << 17);
+    p_var2 = p_var2 + (((int64_t)dig_p4)<<35);
+    p_var1 = ((p_var1 * p_var1 * (int64_t)dig_p3)>>8) + ((p_var1 * (int64_t)dig_p2) << 12);
+    p_var1 = (((((int64_t)1) << 47) + p_var1)) * ((int64_t)dig_p1) >> 33;
+
+    if (p_var1 == 0) {
+        (*pressure) = 0;
+        return;
+    }
+
+    p = 1048576 - p_adc;
+    p = (((p << 31) - p_var2) * 3125) / p_var1;
+    p_var1 = (((int64_t)dig_p9) * (p >> 13) * (p >> 13)) >> 25;
+    p_var2 = (((int64_t)dig_p8) * p) >> 19;
+    p = ((p + p_var1 + p_var2) >> 8) + (((int64_t)dig_p7) << 4);
+
+    (*pressure) = (uint32_t)(p / 256);
+}
+
+int bmp280_get_pressure_int(bmp280_t* bmp, uint32_t* pressure) {
+    int32_t p_adc, t_adc;
+
+    if (_bmp280_read_pressure_adc(bmp, &p_adc, &t_adc) != BMP280_OK) {
+        return BMP280_ERROR;
+    }
+
+    _bmp280_compensate_pressure_int(p_adc, t_adc, bmp->params, pressure);
+
+    return BMP280_OK;
+}

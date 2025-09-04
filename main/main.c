@@ -37,11 +37,14 @@ void app_main(void) {
     bmp280_set_pressure_oversampling(&bmp280, BMP280_OVERSAMPLING_X4);
 
     int32_t temperature;
+    uint32_t pressure;
 
     while (1) {
         bmp280_get_temperature_int(&bmp280, &temperature);
+        bmp280_get_pressure_int(&bmp280, &pressure);
 
-        printf("Temperature: %.2f\n", temperature / 100.0);
+        printf("Temperature: %.2f degC\n", temperature / 100.0);
+        printf("Pressure: %.2f hPa\n", pressure / 100.0);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

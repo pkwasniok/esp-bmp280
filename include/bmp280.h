@@ -43,12 +43,28 @@ typedef enum {
     BMP280_OVERSAMPLING_X16 = 0b101,
 } bmp280_oversampling_t;
 
-typedef struct {
-    i2c_master_dev_handle_t i2c;
-    uint8_t params[26];
-} bmp280_device_t;
+struct bmp280_params {
+    uint16_t t1;
+    int16_t t2;
+    int16_t t3;
+    uint16_t p1;
+    int16_t p2;
+    int16_t p3;
+    int16_t p4;
+    int16_t p5;
+    int16_t p6;
+    int16_t p7;
+    int16_t p8;
+    int16_t p9;
+};
 
-typedef bmp280_device_t* bmp280_handle_t;
+struct bmp280 {
+    i2c_master_dev_handle_t i2c;
+    struct bmp280_params params;
+};
+
+typedef struct bmp280 bmp280_device_t;
+typedef struct bmp280* bmp280_handle_t;
 
 int bmp280_init(bmp280_handle_t, i2c_master_bus_handle_t);
 

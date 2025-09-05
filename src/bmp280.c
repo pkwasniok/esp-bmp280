@@ -1,10 +1,9 @@
 #include "bmp280.h"
-#include <stdint.h>
 
 #include "esp_err.h"
 #include "driver/i2c_master.h"
 
-int _bmp280_write(bmp280_t* bmp280, uint8_t address, uint8_t* buffer, int length) {
+int _bmp280_write(bmp280_handle_t bmp, uint8_t address, uint8_t* buffer, int length) {
     i2c_operation_job_t operations[] = {
         { .command = I2C_MASTER_CMD_START },
         { .command = I2C_MASTER_CMD_WRITE, .write = { .data = &address, .total_bytes = 1 } },
@@ -12,14 +11,14 @@ int _bmp280_write(bmp280_t* bmp280, uint8_t address, uint8_t* buffer, int length
         { .command = I2C_MASTER_CMD_STOP },
     };
 
-    if (i2c_master_execute_defined_operations(bmp280->i2c_device, operations, sizeof(operations) / sizeof(i2c_operation_job_t), 1000) != ESP_OK) {
+    if (i2c_master_execute_defined_operations(bmp->i2c, operations, sizeof(operations) / sizeof(i2c_operation_job_t), 1000) != ESP_OK) {
         return BMP280_ERROR;
     }
 
     return BMP280_OK;
 }
 
-int _bmp280_read(bmp280_t* bmp280, uint8_t address, uint8_t* buffer, int length) {
+int _bmp280_read(bmp280_handle_t bmp, uint8_t address, uint8_t* buffer, int length) {
     i2c_operation_job_t operations[] = {
         { .command = I2C_MASTER_CMD_START },
         { .command = I2C_MASTER_CMD_WRITE, .write = { .data = &address, .total_bytes = 1 } },
@@ -29,17 +28,17 @@ int _bmp280_read(bmp280_t* bmp280, uint8_t address, uint8_t* buffer, int length)
         { .command = I2C_MASTER_CMD_STOP },
     };
 
-    if (i2c_master_execute_defined_operations(bmp280->i2c_device, operations, sizeof(operations) / sizeof(i2c_operation_job_t), 1000) != ESP_OK) {
+    if (i2c_master_execute_defined_operations(bmp->i2c, operations, sizeof(operations) / sizeof(i2c_operation_job_t), 1000) != ESP_OK) {
         return BMP280_ERROR;
     }
 
     return BMP280_OK;
 }
 
-int _bmp280_verify_id(bmp280_t* bmp280) {
+int _bmp280_verify_id(bmp280_handle_t bmp) {
     uint8_t buffer[1];
 
-    if (_bmp280_read(bmp280, BMP280_REG_ID, buffer, 1) != BMP280_OK) {
+    if (_bmp280_read(bmp, BMP280_REG_ID, buffer, 1) != BMP280_OK) {
         return BMP280_ERROR;
     }
 
@@ -50,7 +49,7 @@ int _bmp280_verify_id(bmp280_t* bmp280) {
     return BMP280_OK;
 }
 
-int bmp280_init(bmp280_t* bmp280, i2c_master_bus_handle_t i2c_bus) {
+int bmp280_init(bmp280_handle_t bmp, i2c_master_bus_handle_t i2c_bus) {
     // Check if device with BMP280 address is connected to bus
     if (i2c_master_probe(i2c_bus, BMP280_I2C_ADDRESS, 1000) != ESP_OK) {
         return BMP280_ERROR;
@@ -63,21 +62,21 @@ int bmp280_init(bmp280_t* bmp280, i2c_master_bus_handle_t i2c_bus) {
         .scl_speed_hz = 100000,
     };
 
-    if (i2c_master_bus_add_device(i2c_bus, &i2c_config, &(bmp280->i2c_device)) != ESP_OK) {
+    if (i2c_master_bus_add_device(i2c_bus, &i2c_config, &(bmp->i2c)) != ESP_OK) {
         return BMP280_ERROR;
     }
 
     // Verify BMP280 id
-    if (_bmp280_verify_id(bmp280) != BMP280_OK) {
+    if (_bmp280_verify_id(bmp) != BMP280_OK) {
         return BMP280_ERROR;
     }
 
     // Reset BMP280
-    bmp280_reset(bmp280);
+    bmp280_reset(bmp);
 
     // Read BMP280 calibration parameters
     for (int i = 0; i < 2; i++) {
-        if (_bmp280_read(bmp280, 0x88, bmp280->params, 26) != BMP280_OK) {
+        if (_bmp280_read(bmp, BMP280_REG_CALIB, bmp->params, 26) != BMP280_OK) {
             return BMP280_ERROR;
         }
     }
@@ -85,31 +84,31 @@ int bmp280_init(bmp280_t* bmp280, i2c_master_bus_handle_t i2c_bus) {
     return BMP280_OK;
 }
 
-int bmp280_reset(bmp280_t* bmp280) {
+int bmp280_reset(bmp280_handle_t bmp) {
     uint8_t buffer[1];
 
     buffer[0] = BMP280_VAL_RESET;
-    return _bmp280_write(bmp280, BMP280_REG_RESET, buffer, 1);
+    return _bmp280_write(bmp, BMP280_REG_RESET, buffer, 1);
 }
 
-int bmp280_set_power_mode(bmp280_t* bmp280, bmp280_power_mode_t power_mode) {
+int bmp280_set_power_mode(bmp280_handle_t bmp, bmp280_power_mode_t power_mode) {
     uint8_t buffer[1];
 
-    if (_bmp280_read(bmp280, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
+    if (_bmp280_read(bmp, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
         return BMP280_ERROR;
     }
 
     buffer[0] &= ~(0b00000011);
     buffer[0] |= power_mode;
 
-    if (_bmp280_write(bmp280, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
+    if (_bmp280_write(bmp, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
         return BMP280_ERROR;
     }
 
     return BMP280_OK;
 }
 
-int bmp280_set_temperature_oversampling(bmp280_t* bmp, bmp280_oversampling_t oversampling) {
+int bmp280_set_temperature_oversampling(bmp280_handle_t bmp, bmp280_oversampling_t oversampling) {
     uint8_t buffer[1];
 
     if (_bmp280_read(bmp, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
@@ -126,7 +125,7 @@ int bmp280_set_temperature_oversampling(bmp280_t* bmp, bmp280_oversampling_t ove
     return BMP280_OK;
 }
 
-int bmp280_set_pressure_oversampling(bmp280_t* bmp, bmp280_oversampling_t oversampling) {
+int bmp280_set_pressure_oversampling(bmp280_handle_t bmp, bmp280_oversampling_t oversampling) {
     uint8_t buffer[1];
 
     if (_bmp280_read(bmp, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK) {
@@ -143,7 +142,7 @@ int bmp280_set_pressure_oversampling(bmp280_t* bmp, bmp280_oversampling_t oversa
     return BMP280_OK;
 }
 
-int _bmp280_read_temperature_adc(bmp280_t* bmp, int32_t* t_adc) {
+int _bmp280_read_temperature_adc(bmp280_handle_t bmp, int32_t* t_adc) {
     uint8_t buffer[3];
 
     if (_bmp280_read(bmp, BMP280_REG_TEMP_MSB, buffer, 3) != BMP280_OK) {
@@ -169,7 +168,7 @@ void _bmp280_compensate_temperature_int(int32_t t_adc, uint8_t* params, int32_t*
     (*t) = (t_fine * 5 + 128) >> 8;
 }
 
-int bmp280_get_temperature_int(bmp280_t* bmp, int32_t* temperature) {
+int bmp280_get_temperature_degC_x100_int(bmp280_handle_t bmp, int32_t* temperature) {
     int32_t t_adc;
 
     if (_bmp280_read_temperature_adc(bmp, &t_adc) != BMP280_OK) {
@@ -181,7 +180,7 @@ int bmp280_get_temperature_int(bmp280_t* bmp, int32_t* temperature) {
     return BMP280_OK;
 }
 
-int _bmp280_read_pressure_adc(bmp280_t* bmp, int32_t* p_adc, int32_t* t_adc) {
+int _bmp280_read_pressure_adc(bmp280_handle_t bmp, int32_t* p_adc, int32_t* t_adc) {
     uint8_t buffer[6];
 
     if (_bmp280_read(bmp, BMP280_REG_PRESS_MSB, buffer, 6) != BMP280_OK) {
@@ -239,7 +238,7 @@ void _bmp280_compensate_pressure_int(int32_t p_adc, int32_t t_adc, uint8_t* para
     (*pressure) = (uint32_t)(p / 256);
 }
 
-int bmp280_get_pressure_int(bmp280_t* bmp, uint32_t* pressure) {
+int bmp280_get_pressure_Pa_x1_int(bmp280_handle_t bmp, uint32_t* pressure) {
     int32_t p_adc, t_adc;
 
     if (_bmp280_read_pressure_adc(bmp, &p_adc, &t_adc) != BMP280_OK) {

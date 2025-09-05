@@ -1,0 +1,5 @@
+version: "1.0.0"
+dependencies:
+  pwkasniok/bmp280:
+    version: "*"
+    override_path: "../../../"

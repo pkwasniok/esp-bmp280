@@ -44,17 +44,6 @@ int _bmp280_read_params(bmp280_handle_t device, bmp280_params_t* params) {
     return BMP280_OK;
 }
 
-int _bmp280_write_config(bmp280_handle_t device, bmp280_config_t* config) {
-    uint8_t buffer[1];
-
-    buffer[0] = (config->temperature_oversampling << 5) | (config->pressure_oversampling << 2) | config->power_mode;
-
-    if (_bmp280_write(device, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK)
-        return BMP280_ERROR;
-
-    return BMP280_OK;
-}
-
 int bmp280_init(bmp280_handle_t device, bmp280_config_t* config, i2c_master_bus_handle_t i2c_bus) {
     if (i2c_master_probe(i2c_bus, BMP280_I2C_ADDRESS, 1000) != ESP_OK)
         return BMP280_ERROR;
@@ -79,7 +68,7 @@ int bmp280_init(bmp280_handle_t device, bmp280_config_t* config, i2c_master_bus_
     if (_bmp280_read_params(device, &device->params) != BMP280_OK)
         return BMP280_ERROR;
 
-    if (_bmp280_write_config(device, config) != BMP280_OK)
+    if (bmp280_set_config(device, config) != BMP280_OK)
         return BMP280_ERROR;
 
     return BMP280_OK;
@@ -91,6 +80,17 @@ int bmp280_reset(bmp280_handle_t device) {
     buffer[0] = BMP280_VAL_RESET;
 
     if (_bmp280_write(device, BMP280_REG_RESET, buffer, 1) != BMP280_OK)
+        return BMP280_ERROR;
+
+    return BMP280_OK;
+}
+
+int bmp280_set_config(bmp280_handle_t device, bmp280_config_t* config) {
+    uint8_t buffer[1];
+
+    buffer[0] = (config->temperature_oversampling << 5) | (config->pressure_oversampling << 2) | config->power_mode;
+
+    if (_bmp280_write(device, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK)
         return BMP280_ERROR;
 
     return BMP280_OK;

@@ -75,6 +75,7 @@ typedef bmp280_device_t* bmp280_handle_t;
 int bmp280_init(bmp280_handle_t, bmp280_config_t*, i2c_master_bus_handle_t);
 
 int bmp280_reset(bmp280_handle_t);
+int bmp280_set_config(bmp280_handle_t, bmp280_config_t*);
 
 int bmp280_get_temperature_degC_x100_int(bmp280_handle_t, int32_t*);
 int bmp280_get_pressure_Pa_x1_int(bmp280_handle_t, uint32_t*);

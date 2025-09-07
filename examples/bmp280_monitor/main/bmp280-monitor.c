@@ -19,21 +19,23 @@ void app_main(void) {
     i2c_master_bus_handle_t i2c_bus;
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_config, &i2c_bus));
 
-    bmp280_device_t bmp;
-    ESP_ERROR_CHECK(bmp280_init(&bmp, i2c_bus));
+    bmp280_config_t bmp280_config = {
+        .power_mode = BMP280_POWER_MODE_NORMAL,
+        .temperature_oversampling = BMP280_OVERSAMPLING_X1,
+        .pressure_oversampling = BMP280_OVERSAMPLING_X4,
+    };
 
-    bmp280_set_power_mode(&bmp, BMP280_POWER_MODE_NORMAL);
-    bmp280_set_temperature_oversampling(&bmp, BMP280_OVERSAMPLING_X1);
-    bmp280_set_pressure_oversampling(&bmp, BMP280_OVERSAMPLING_X4);
+    bmp280_device_t bmp280;
+    ESP_ERROR_CHECK(bmp280_init(&bmp280, &bmp280_config, i2c_bus));
 
     while (1) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         int32_t temperature;
-        bmp280_get_temperature_degC_x100_int(&bmp, &temperature);
+        bmp280_get_temperature_degC_x100_int(&bmp280, &temperature);
 
         uint32_t pressure;
-        bmp280_get_pressure_Pa_x1_int(&bmp, &pressure);
+        bmp280_get_pressure_Pa_x1_int(&bmp280, &pressure);
 
         printf("Temperature: %.2f degC\n", temperature / 100.0);
         printf("Pressure: %.2f hPa\n", pressure / 100.0);

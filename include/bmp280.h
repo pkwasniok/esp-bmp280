@@ -43,7 +43,8 @@ typedef enum {
     BMP280_OVERSAMPLING_X16 = 0b101,
 } bmp280_oversampling_t;
 
-struct bmp280_params {
+// BMP280 Datasheet p. 21
+typedef struct {
     uint16_t t1;
     int16_t t2;
     int16_t t3;
@@ -56,23 +57,24 @@ struct bmp280_params {
     int16_t p7;
     int16_t p8;
     int16_t p9;
-};
+} bmp280_params_t;
 
-struct bmp280 {
+typedef struct {
+    bmp280_power_mode_t power_mode;
+    bmp280_oversampling_t temperature_oversampling;
+    bmp280_oversampling_t pressure_oversampling;
+} bmp280_config_t;
+
+typedef struct {
     i2c_master_dev_handle_t i2c;
-    struct bmp280_params params;
-};
+    bmp280_params_t params;
+} bmp280_device_t;
 
-typedef struct bmp280 bmp280_device_t;
-typedef struct bmp280* bmp280_handle_t;
+typedef bmp280_device_t* bmp280_handle_t;
 
-int bmp280_init(bmp280_handle_t, i2c_master_bus_handle_t);
+int bmp280_init(bmp280_handle_t, bmp280_config_t*, i2c_master_bus_handle_t);
 
 int bmp280_reset(bmp280_handle_t);
-
-int bmp280_set_power_mode(bmp280_handle_t, bmp280_power_mode_t);
-int bmp280_set_temperature_oversampling(bmp280_handle_t, bmp280_oversampling_t);
-int bmp280_set_pressure_oversampling(bmp280_handle_t, bmp280_oversampling_t);
 
 int bmp280_get_temperature_degC_x100_int(bmp280_handle_t, int32_t*);
 int bmp280_get_pressure_Pa_x1_int(bmp280_handle_t, uint32_t*);

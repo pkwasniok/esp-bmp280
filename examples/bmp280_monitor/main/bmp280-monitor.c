@@ -20,13 +20,15 @@ void app_main(void) {
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_config, &i2c_bus));
 
     bmp280_config_t bmp280_config = {
-        .power_mode = BMP280_POWER_MODE_NORMAL,
+        .standby_time = BMP280_STANDBY_1_MS,
         .temperature_oversampling = BMP280_OVERSAMPLING_X1,
         .pressure_oversampling = BMP280_OVERSAMPLING_X4,
+        .filter = BMP280_FILTER_OFF,
     };
 
     bmp280_device_t bmp280;
     ESP_ERROR_CHECK(bmp280_init(&bmp280, &bmp280_config, i2c_bus));
+    ESP_ERROR_CHECK(bmp280_set_power_mode(&bmp280, BMP280_POWER_MODE_NORMAL));
 
     while (1) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);

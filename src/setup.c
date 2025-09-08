@@ -85,12 +85,36 @@ int bmp280_reset(bmp280_handle_t device) {
     return BMP280_OK;
 }
 
-int bmp280_set_config(bmp280_handle_t device, bmp280_config_t* config) {
+int bmp280_set_power_mode(bmp280_handle_t device, bmp280_power_mode_t power_mode) {
     uint8_t buffer[1];
 
-    buffer[0] = (config->temperature_oversampling << 5) | (config->pressure_oversampling << 2) | config->power_mode;
+    if (_bmp280_read(device, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK)
+        return BMP280_ERROR;
+
+    buffer[0] &= ~(0b00000011);
+    buffer[0] |= power_mode;
 
     if (_bmp280_write(device, BMP280_REG_CTRL_MEAS, buffer, 1) != BMP280_OK)
+        return BMP280_ERROR;
+
+    return BMP280_OK;
+}
+
+int bmp280_set_config(bmp280_handle_t device, bmp280_config_t* config) {
+    uint8_t buffer[2];
+
+    if (_bmp280_read(device, BMP280_REG_CTRL_MEAS, buffer, 2) != BMP280_OK)
+        return BMP280_ERROR;
+
+    // CTRL_MEAS
+    buffer[0] &= ~(0b11111100);
+    buffer[0] |= (config->temperature_oversampling << 5) | (config->pressure_oversampling << 2);
+
+    // CONFIG
+    buffer[1] &= ~(0b00000011);
+    buffer[1] |= (config->standby_time << 5) | (config->filter << 2);
+
+    if (_bmp280_write(device, BMP280_REG_CTRL_MEAS, buffer, 2) != BMP280_OK)
         return BMP280_ERROR;
 
     return BMP280_OK;
